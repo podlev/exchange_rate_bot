@@ -1,7 +1,7 @@
 import requests
 
 
-def get_rate():
+def get_rate_exchange():
     try:
         response = requests.get('https://www.cbr-xml-daily.ru/daily_json.js').json()
         return response['Valute']
@@ -11,4 +11,4 @@ def get_rate():
 
 
 if __name__ == '__main__':
-    print(get_rate())
+    print(get_rate_exchange())
