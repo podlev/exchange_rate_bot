@@ -17,6 +17,11 @@ class User(Base):
     subscribes = relationship('Subscribe', back_populates="user")
     types = relationship('SubscribeType', back_populates="user")
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f'Пользователь {self.id}'
 
 
 class SubscribeType(Base):
@@ -29,10 +34,10 @@ class SubscribeType(Base):
     user = relationship('User', back_populates="types")
 
     def __repr__(self):
-        return f'Подписка пользователя {self.user_id}: ({self.type}, {self.delay}, {self.delta})'
+        return self.__str__()
 
     def __str__(self):
-        return f'Подписка пользователя {self.user_id}: тип {self.type}, задержка {self.delay} изменение {self.delta}'
+        return f'Подписка типа {self.type}'
 
 
 
@@ -44,8 +49,14 @@ class Subscribe(Base):
     value = Column(Float)
     previous = Column(Float)
     user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
-    created_date = Column(DateTime(), default=datetime.now)
+    updated_date = Column(DateTime(), default=datetime.now)
     user = relationship('User', back_populates="subscribes")
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f'Подписка на {self.code}'
 
 
 Base.metadata.create_all(engine)
