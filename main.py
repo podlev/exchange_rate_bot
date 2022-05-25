@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from pprint import pprint
 
@@ -18,6 +19,9 @@ if not bot_token:
 
 bot = Bot(token=bot_token)
 dp = Dispatcher(bot)
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 MAIN_BUTTONS = ('Получить курс валюты',
                 'Выбрать валюту',
