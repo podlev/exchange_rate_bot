@@ -7,7 +7,7 @@ def get_currency():
         return response['Valute']
     except Exception as e:
         print(e)
-        return {}
+        return None
 
 
 if __name__ == '__main__':
