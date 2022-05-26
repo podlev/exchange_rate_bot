@@ -1,27 +1,36 @@
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
-from pprint import pprint
+from sys import exit
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import filters
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from exchange_rate.exchange_rate import get_currency
-from database.db import engine, User, Subscribe, SubscribeType
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
-from os import getenv
-from sys import exit
+from database.db import engine, User, Subscribe, SubscribeType
+from exchange_rate.exchange_rate import get_currency
 
-bot_token = getenv("BOT_TOKEN")
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+
+logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s',
+                    level=logging.INFO)
+logging.getLogger('aiogram').setLevel(logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.INFO)
+
+bot_token = os.getenv("BOT_TOKEN")
+
 if not bot_token:
-    exit("Error: no token provided")
+    logging.critical("Error: no token provided")
+    exit()
 
 bot = Bot(token=bot_token)
 dp = Dispatcher(bot)
-
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 MAIN_BUTTONS = ('Получить курс валюты',
                 'Выбрать валюту',
@@ -90,7 +99,7 @@ CURRENCY_KEYBOARD = ReplyKeyboardMarkup(row_width=1).add(*CURRENCY_NAME_CODE.key
 
 
 async def update_currency():
-    print('Обновление валюты начато')
+    logging.info('Обновление валюты начато')
     global currency
     global CURRENCY_NAME_CODE
     global CURRENCY_KEYBOARD
@@ -104,9 +113,9 @@ async def update_currency():
             if subscribe.value != currency[subscribe.code]['Value']:
                 subscribe.value = currency[subscribe.code]['Value']
         session.commit()
-        print('Обновление валюты завершено')
+        logging.info('Обновление валюты завершено')
         return
-    print('Ошибка обновления')
+    logging.error('Ошибка обновления')
 
 
 @dp.message_handler(commands=['start'])
@@ -275,7 +284,6 @@ async def choose_currency(message: types.Message):
 
 @dp.message_handler(filters.Text(equals=CURRENCY_NAME_CODE.keys()))
 async def set_subscribe(message: types.Message):
-    print('Отслеживание')
     session = Session(bind=engine)
     subscribe = session.query(Subscribe).get((CURRENCY_NAME_CODE[message.text], message.from_user.id))
     if not subscribe:
@@ -307,22 +315,21 @@ async def get_now_currency(message: types.Message):
     text = ''
     if subscribes:
         for subscribe in subscribes:
-            text += f"{subscribe.name} стоит {subscribe.value} рублей.\n"
+            text += f"{subscribe.nominal} {subscribe.name} стоит {subscribe.value} рублей.\n"
     else:
         text = 'Вы не выбрали ни одну валюту для отслеживания.'
     await message.answer(text, reply_markup=MAIN_KEYBOARD)
 
 
 async def send_currency():
-    print('Начало рассылки')
+    logging.info('Начало рассылки')
     now = datetime.now()
     session = Session(bind=engine)
     user_type_subscribe_table = session.query(User, SubscribeType, Subscribe).filter(
         User.id == SubscribeType.user_id).filter(
         User.id == Subscribe.user_id).all()
     text = {}
-    pprint(user_type_subscribe_table)
-    print('Рассылка по времени')
+    logging.info('Рассылка по времени')
     for user, subscribe_type, subscribe in user_type_subscribe_table:
         if subscribe_type.type == 1:
             if now - subscribe.updated_date >= timedelta(seconds=subscribe_type.delay):
@@ -331,27 +338,28 @@ async def send_currency():
                 else:
                     text[user.id] += f"{subscribe.nominal} {subscribe.name} стоит {subscribe.value} рублей.\n"
                 subscribe.updated_date = datetime.now()
-    print(text)
     for user in text.keys():
         await bot.send_message(user, text[user])
-    print('Рассылка по времени завершена.')
-    print('Рассылка по разнице')
+        await asyncio.sleep(0.1)
+    logging.info('Рассылка по времени завершена.')
+    logging.info('Рассылка по разнице')
     for user, subscribe_type, subscribe in user_type_subscribe_table:
         if subscribe_type.type == 2:
             if abs(subscribe.value - subscribe.previous) >= subscribe_type.delta:
-                text = f"Стоимость {subscribe.nominal} {subscribe.name} изменилась на {subscribe_type.delta} копеек/рублей.\n"
+                text = f"Стоимость {subscribe.nominal} {subscribe.name}" \
+                       f" изменилась на {subscribe_type.delta} копеек/рублей.\n"
                 text += f'Цена была {subscribe.previous}, цена стала {subscribe.value}'
                 await bot.send_message(user.id, text)
                 subscribe.previous = subscribe.value
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
     session.commit()
-    print('Рассылка по разнице завершена.')
+    logging.info('Рассылка по разнице завершена.')
 
 
 async def mainloop():
     while True:
         await update_currency()
-        await asyncio.sleep(10)
+        await asyncio.sleep(60)
         await send_currency()
 
 
