@@ -17,11 +17,10 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
 
-logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s',
-                    level=logging.INFO)
-logging.getLogger('aiogram').setLevel(logging.INFO)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-logging.getLogger("sqlalchemy.pool").setLevel(logging.INFO)
+logging.basicConfig(level=logging.WARNING,
+                    filename='main.log',
+                    filemode='a',
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
 bot_token = os.getenv("BOT_TOKEN")
 
@@ -89,6 +88,7 @@ currency = {'AUD': {'Nominal': 1, 'Name': 'Австралийский долла
             'ZAR': {'Nominal': 10, 'Name': 'Южноафриканских рэндов', 'Value': 35.9579, 'Previous': 36.1323},
             'KRW': {'Nominal': 1000, 'Name': 'Вон Республики Корея', 'Value': 44.5197, 'Previous': 44.9921},
             'JPY': {'Nominal': 100, 'Name': 'Японских иен', 'Value': 44.3409, 'Previous': 44.5523}}
+
 MAIN_KEYBOARD = ReplyKeyboardMarkup(row_width=1).add(*(KeyboardButton(text) for text in MAIN_BUTTONS))
 RATE_KEYBOARD = ReplyKeyboardMarkup(row_width=1).add(*(KeyboardButton(text) for text in RATE_BUTTONS))
 DELTA_KEYBOARD = ReplyKeyboardMarkup(row_width=1).add(*(KeyboardButton(text) for text in DELTA_BUTTONS))
@@ -363,11 +363,7 @@ async def mainloop():
         await send_currency()
 
 
-def main():
+if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(mainloop())
     executor.start_polling(dp, skip_updates=True)
-
-
-if __name__ == '__main__':
-    main()
