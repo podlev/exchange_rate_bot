@@ -206,7 +206,6 @@ async def set_rate(message: types.Message):
     subscribe_type = session.query(SubscribeType).filter(SubscribeType.type == 1,
                                                          SubscribeType.user_id == message.from_user.id).all()
     text = ''
-    print(subscribe_type)
     if subscribe_type:
         for subscribe in subscribe_type:
             if subscribe.type == 1:
